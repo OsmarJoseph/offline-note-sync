@@ -13,6 +13,9 @@ export default defineConfig(
         tsconfigRootDir: import.meta.dirname,
       },
     },
+    rules: {
+      '@typescript-eslint/consistent-type-definitions': ['error', 'type'],
+    },
   },
   {
     // Plain JS config files sit outside every tsconfig, so they get no type information.
