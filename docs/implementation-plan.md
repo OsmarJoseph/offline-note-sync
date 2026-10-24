@@ -129,7 +129,7 @@ Sets up the repo so later phases only write code: the npm workspace with `apps/a
 
 Writes the operation and result types and the zod parsing that checks an operation's fields before anything is read. They have no Nest or Drizzle imports, so the unit tests run without a database.
 
-- Done when: each invalid input (U+0000, a lone surrogate, more than 64 KiB, an uppercase UUID, a bad base revision) gets `invalid` naming its field.
+- Done when: an invalid operation gets `invalid` naming each failing field.
 
 ### Phase 2: database layer
 
