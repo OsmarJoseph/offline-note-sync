@@ -1,6 +1,6 @@
 # Offline note sync: implementation plan
 
-This is the plan for Alvorada Dev's technical challenge, case 05. It holds the case rules, the settled decisions and the phases, and it leaves implementation details to the session that builds each phase. Phase status goes in `docs/progress.md`.
+This is the plan for Alvorada Dev's technical challenge, case 05. It holds the case rules, the settled decisions and the phases, and it leaves implementation details to the session that builds each phase. Each phase shows its status, and the session that finishes a phase marks it done.
 
 ## The product
 
@@ -94,8 +94,7 @@ Requests and results are JSON with snake_case fields. To settle a conflict, the 
 ## Layout
 
 ```
-apps/api/        NestJS 12 app: sync rules, Drizzle schema and migrations, repository, service, controller, scenario CLI
-scenarios/       JSON scenarios with expected results, shared by the e2e tests and the CLI
+apps/api/        NestJS 12 app: sync rules, Drizzle schema and migrations, repository, service, controller
 ```
 
 The API exposes `POST /sync` (a body of `{ operations }` with 1-100 operations, answered with `{ results }`, one result per operation), `GET /notes`, `GET /notes/:id` and `POST /dev/reset`, which only works when `ENABLE_DEV_ROUTES=true`.
@@ -118,9 +117,13 @@ Every phase ends by running `npm run typecheck`, `npm run format`, `npm run lint
 
 ### Phase 0: scaffold
 
+Status: done.
+
 Sets up the repo so later phases only write code: the npm workspace with `apps/api`, TypeScript, ESLint, Prettier and the root scripts.
 
 ### Phase 1: types and validation
+
+Status: done.
 
 Writes the operation and result types and the zod parsing that checks an operation's fields before anything is read. They have no Nest or Drizzle imports, so the unit tests run without a database.
 
@@ -128,11 +131,15 @@ Writes the operation and result types and the zod parsing that checks an operati
 
 ### Phase 2: database layer
 
+Status: done.
+
 Adds Nest and the database it talks to: Postgres 18.6 in Docker on port 54329, the `notes` and `operations` tables as a Drizzle schema, and the migrations that create them, and a global Nest module that provides the database connection. The app bootstrap waits for Phase 4.
 
 - Done when: the migrations apply to an empty database, and generating them again finds no changes.
 
 ### Phase 3: repository and service
+
+Status: done.
 
 Connects the rules to the database. The repository holds the queries, and the service runs each operation in its own transaction: lock, read, apply the sync rules, write. The service tests on Postgres cover the case example, the first two highlighted tests and the resend rules, and the concurrency tests prove that requests arriving at the same moment still end with one winner.
 
@@ -141,23 +148,21 @@ Connects the rules to the database. The repository holds the queries, and the se
 
 ### Phase 4: HTTP API
 
+Status: done.
+
 Puts the service behind HTTP: `POST /sync`, `GET /notes`, `GET /notes/:id` and `POST /dev/reset`. The controller validates each operation and sends only the valid ones to the service, in order. The end-to-end tests send real requests to the running app and cover the third highlighted test and invalid operations in a queue.
 
-### Phase 5: scenarios and CLI
+### Phase 5: README
 
-Builds the demo. A scenario is a JSON file of operations to send and the results expected back, and the CLI runs one against the API and reports each step as pass or fail. Two scenarios ship: the case's own example, and a grocery-list story that reaches every status.
+Status: not started.
 
-- Done when: the grocery-list scenario passes against the running API, and the CLI exits with code 1 when an expectation is wrong.
-
-### Phase 6: README
-
-Writes the README the case asks for: how to install, run and test, the demo, the three highlighted tests, two decisions and how AI was used.
+Writes the README the case asks for: how to install, run and test, the demo, the three highlighted tests, two decisions and how AI was used. The demo is the case's example as curl commands against the running API, with the result each one returns.
 
 - Done when: someone with a fresh clone can follow it from install to demo.
 
 ## Not built, and why
 
-- **Next.js two-device simulator:** doesn't fit the time budget, and the scenario CLI already gives a demo anyone can repeat.
+- **Next.js two-device simulator:** doesn't fit the time budget, and the curl commands in the README already give a demo anyone can repeat.
 - **SSE live updates:** only useful with a UI showing two devices.
 - **Real-time co-editing:** needs automatic merging, which the case forbids.
 - **Cleanup of old operations:** not needed at this size, and applied operations can never be deleted, since they hold each note's history.
