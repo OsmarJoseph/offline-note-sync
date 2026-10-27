@@ -77,12 +77,15 @@ curl -s localhost:3000/notes/$N; echo
 
 ```sh
 npm test
-npm run typecheck
-npm run lint
-npm run format:check
 ```
 
 The tests need Postgres up. They run on their own database, `offline_note_sync_test`, which they create and migrate on the same server, so they never touch the API's data.
+
+There are three test files in `apps/api/test`:
+
+- **`parse-operation.spec.ts`** checks which operations are valid, with no database.
+- **`sync.service.spec.ts`** checks the sync rules on Postgres, including the case's example, resends and requests that arrive at the same moment.
+- **`sync.e2e.spec.ts`** sends real HTTP requests to the app and checks its answers.
 
 ## The API
 
