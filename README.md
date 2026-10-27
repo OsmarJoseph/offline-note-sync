@@ -2,8 +2,7 @@
 
 My solution to [case 05 of Alvorada Dev's technical challenge](https://github.com/Alvorada-Dev/desafios-tecnicos/blob/main/casos/05-sincronizacao-de-notas.md): the server side of syncing notes edited on devices that are often offline. A device sends its queue of edits, and the server applies each one or answers with a conflict that keeps the rejected text, so nobody's work is overwritten without them knowing. The full rules, decisions and phases are in [docs/implementation-plan.md](docs/implementation-plan.md).
 
-- **Focus:** back end. The sync rules, and keeping them correct when requests for the same note or operation arrive at the same moment, in a NestJS API on Postgres written in TypeScript with Drizzle and zod.
-- **Time spent:** about four hours, in short sessions spread over several days rather than one sitting.
+- **Time spent:** about four hours, split into short sessions.
 
 ## Install and run
 
