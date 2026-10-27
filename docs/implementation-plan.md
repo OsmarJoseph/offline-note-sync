@@ -98,7 +98,7 @@ apps/api/        NestJS 12 app: sync rules, Drizzle schema and migrations, repos
 scenarios/       JSON scenarios with expected results, shared by the e2e tests and the CLI
 ```
 
-The API exposes `POST /sync` (1-100 operations, one result per operation), `GET /notes`, `GET /notes/:id` and `POST /dev/reset`, which only works when `ENABLE_DEV_ROUTES=true`.
+The API exposes `POST /sync` (a body of `{ operations }` with 1-100 operations, answered with `{ results }`, one result per operation), `GET /notes`, `GET /notes/:id` and `POST /dev/reset`, which only works when `ENABLE_DEV_ROUTES=true`.
 
 ## Tests that matter
 
@@ -106,11 +106,6 @@ The API exposes `POST /sync` (1-100 operations, one result per operation), `GET 
   1. An edit with base 1 reaches the server before its note exists and gets `note_not_found`. Another operation then creates the note, and the edit is resent. Its base now matches, but it still gets `note_not_found`. It fails if the server decides a resend again instead of returning the saved result.
   2. Base 0 on an existing note is a `conflict`, and an edit with the same text still raises the revision. It fails if a create overwrites an existing note, or if an edit with unchanged text is skipped.
   3. A request with `X` (invalid), `X` (valid) and `Y` (valid) gets `invalid`, `applied`, `applied`. It fails if an invalid operation keeps its `op_id` from being used, or if one bad operation stops the rest.
-- **Property tests** run random histories with many reused ids through the service on Postgres (fast-check, 200 runs), and check that:
-  - every operation gets one result, in order;
-  - resending the whole history changes nothing;
-  - a note's revision equals its number of applied operations;
-  - results carry exactly what was sent.
 - **Concurrency tests** send these at the same moment, and each must end with exactly one winner:
   - two creates of the same note;
   - two edits from the same revision;
@@ -133,7 +128,7 @@ Writes the operation and result types and the zod parsing that checks an operati
 
 ### Phase 2: database layer
 
-Adds Nest and the database it talks to: Postgres 18.6 in Docker on port 54329, the `notes` and `operations` tables as a Drizzle schema, and the migrations that create them, and a global Nest module that provides the database connection. The app bootstrap waits for Phase 5.
+Adds Nest and the database it talks to: Postgres 18.6 in Docker on port 54329, the `notes` and `operations` tables as a Drizzle schema, and the migrations that create them, and a global Nest module that provides the database connection. The app bootstrap waits for Phase 4.
 
 - Done when: the migrations apply to an empty database, and generating them again finds no changes.
 
@@ -144,21 +139,17 @@ Connects the rules to the database. The repository holds the queries, and the se
 - Done when: a test that sends two creates of the same note at once passes, and the tests fail if an accepted edit doesn't raise the revision by 1.
 - Write that test before handling the race. With a plain insert, the second create crashes with a unique violation, and with `on conflict do nothing` it gets a normal `conflict` result instead.
 
-### Phase 4: property tests
-
-Instead of hand-written cases, fast-check generates hundreds of random operation histories and runs them through the service, checking the properties listed in "Tests that matter".
-
-### Phase 5: HTTP API
+### Phase 4: HTTP API
 
 Puts the service behind HTTP: `POST /sync`, `GET /notes`, `GET /notes/:id` and `POST /dev/reset`. The controller validates each operation and sends only the valid ones to the service, in order. The end-to-end tests send real requests to the running app and cover the third highlighted test and invalid operations in a queue.
 
-### Phase 6: scenarios and CLI
+### Phase 5: scenarios and CLI
 
 Builds the demo. A scenario is a JSON file of operations to send and the results expected back, and the CLI runs one against the API and reports each step as pass or fail. Two scenarios ship: the case's own example, and a grocery-list story that reaches every status.
 
 - Done when: the grocery-list scenario passes against the running API, and the CLI exits with code 1 when an expectation is wrong.
 
-### Phase 7: README
+### Phase 6: README
 
 Writes the README the case asks for: how to install, run and test, the demo, the three highlighted tests, two decisions and how AI was used.
 

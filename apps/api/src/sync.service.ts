@@ -38,6 +38,14 @@ export class SyncService {
     return this.repository.findNote(this.database, noteId);
   }
 
+  listNotes(): Promise<Note[]> {
+    return this.repository.listNotes(this.database);
+  }
+
+  deleteAllNotesAndOperations(): Promise<void> {
+    return this.repository.deleteAllNotesAndOperations(this.database);
+  }
+
   private async saveNewOperation(
     transaction: Transaction,
     operation: Operation,

@@ -56,6 +56,14 @@ export class SyncRepository {
     return note;
   }
 
+  listNotes(database: Database): Promise<Note[]> {
+    return database.select().from(notes).orderBy(notes.id);
+  }
+
+  async deleteAllNotesAndOperations(database: Database): Promise<void> {
+    await database.execute(sql`truncate ${notes}, ${operations}`);
+  }
+
   async insertOperation(
     transaction: Transaction,
     operation: Operation,
