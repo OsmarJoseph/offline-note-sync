@@ -154,16 +154,8 @@ Puts the service behind HTTP: `POST /sync`, `GET /notes`, `GET /notes/:id` and `
 
 ### Phase 5: README
 
-Status: not started.
+Status: done.
 
-Writes the README the case asks for: how to install, run and test, the demo, the three highlighted tests, two decisions and how AI was used. The demo is the case's example as curl commands against the running API, with the result each one returns.
+Writes the README the case asks for: how to install, run and test, the demo, the three highlighted tests, two decisions and how AI was used. The demo is the case's example as a single curl script against the running API.
 
 - Done when: someone with a fresh clone can follow it from install to demo.
-
-## Not built, and why
-
-- **Next.js two-device simulator:** doesn't fit the time budget, and the curl commands in the README already give a demo anyone can repeat.
-- **SSE live updates:** only useful with a UI showing two devices.
-- **Real-time co-editing:** needs automatic merging, which the case forbids.
-- **Cleanup of old operations:** not needed at this size, and applied operations can never be deleted, since they hold each note's history.
-- **Users and auth:** not part of the case.
