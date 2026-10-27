@@ -21,7 +21,9 @@ Postgres listens on port 54329 and the API on port 3000. `npm run dev:api` turns
 
 ## Demo
 
-The case's own example, run with curl against the API started above. Paste it into bash or zsh:
+The case's example, one step at a time, with curl against the API started above. Run the steps in order in a second terminal (bash or zsh).
+
+**1. Set up.** A phone and a laptop share the note `N`, and each edit they make offline is an operation with its own id. `send` posts one operation to `POST /sync` with its id, the revision the device last saw and the new text, and the reset at the end starts the demo clean.
 
 ```sh
 N=6f1c2a4e-8b3d-4c5e-9a7f-1d2e3f4a5b6c
@@ -37,15 +39,38 @@ send() {
 }
 
 curl -s -X POST localhost:3000/dev/reset
+```
 
+**2. Create and read a note.** Base revision 0 means a new note, so the phone's create is `applied` at revision 1, and `GET /notes/:id` reads it back.
+
+```sh
 send $O1 0 'início'
-send $O2 1 'edição A'
-send $O3 1 'edição B'
-send $O2 1 'edição A'
-send $O4 2 'A + B'
-send $O3 1 'edição B'
 curl -s localhost:3000/notes/$N; echo
-send $O2 1 'outra coisa'
+```
+
+**3. Edit it.** The phone edits from revision 1, the current one, so the edit is `applied` at revision 2.
+
+```sh
+send $O2 1 'edição A'
+```
+
+**4. Edit from an old revision.** The laptop also edited from revision 1 while offline, so it gets a `conflict` showing the server's note at revision 2 and its own text as `rejected_text`, and nothing is overwritten.
+
+```sh
+send $O3 1 'edição B'
+```
+
+**5. Resend after a lost answer.** The phone never got the answer to step 3 and sends O2 again. It gets the same saved result, and the note stays at revision 2.
+
+```sh
+send $O2 1 'edição A'
+```
+
+**6. Resolve the conflict.** The person merges both texts on the laptop and sends them from revision 2, which is `applied` at revision 3.
+
+```sh
+send $O4 2 'A + B'
+curl -s localhost:3000/notes/$N; echo
 ```
 
 ## Test
@@ -91,7 +116,7 @@ The concurrency tests in the service spec are also worth a look: they send two c
 
 ## Not built, and why
 
-- **A two-device UI simulator:** it doesn't fit the time budget, and the curl script above already gives a demo anyone can repeat.
+- **A two-device UI simulator:** it doesn't fit the time budget, and the curl walkthrough above already shows two devices step by step.
 - **Live updates (SSE):** only useful with a UI showing two devices.
 - **Real-time co-editing:** it needs automatic merging, which the case forbids.
 - **Cleanup of old operations:** not needed at this size, and applied operations can never be deleted, since they hold each note's history.
