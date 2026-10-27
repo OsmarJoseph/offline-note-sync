@@ -57,7 +57,7 @@ npm run lint
 npm run format:check
 ```
 
-The tests need Postgres up, and they use the same database as the API, so running them clears whatever the demo left there.
+The tests need Postgres up. They run on their own database, `offline_note_sync_test`, which they create and migrate on the same server, so they never touch the API's data.
 
 ## The API
 

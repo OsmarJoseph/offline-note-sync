@@ -40,6 +40,7 @@ Below its table, the case adds two checks. A resent O3 still gets its original c
 
 - **Types and field validation live in a domain module** with no Nest or Drizzle imports, so they are tested without a database.
 - **The sync rules live in the service**, next to the transaction that reads and writes the rows they decide on, so they are tested on Postgres.
+- **Tests run on their own Postgres database**, named after the API's with a `_test` suffix and created by the test setup, so running them never clears the API's data. It stays real Postgres, not an in-memory copy, because the concurrency tests need separate connections to prove the locks.
 - **Postgres is the only store**, because its transactions, row locks and unique keys are what keep operations from applying twice or overwriting each other.
 - **The service passes the transaction to the repository**, so the service code shows every query that runs inside the transaction, and there is no repository interface, since there's only one database.
 
