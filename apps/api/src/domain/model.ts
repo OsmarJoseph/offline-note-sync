@@ -25,7 +25,12 @@ export type OperationResult =
 
 export type InvalidResult = Extract<OperationResult, { status: 'invalid' }>;
 
+export type SavedResult = Extract<
+  OperationResult,
+  { status: 'applied' | 'conflict' | 'note_not_found' }
+>;
+
 export type StoredOperation = {
   operation: Operation;
-  result: OperationResult;
+  result: SavedResult;
 };

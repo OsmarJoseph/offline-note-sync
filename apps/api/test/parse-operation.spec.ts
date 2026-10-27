@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { InvalidResult } from '../src/domain/model.ts';
 import { MAX_TEXT_BYTES, parseOperation } from '../src/domain/parse-operation.ts';
-import { noteId, operation, otherNoteId, uuid } from './fixtures.ts';
+import { noteId, otherNoteId, uuid } from './fixtures.ts';
 
 function invalidResult(input: unknown): InvalidResult {
   const result = parseOperation(input);
@@ -21,24 +21,40 @@ function isValid(input: unknown): boolean {
 
 describe('parseOperation', () => {
   it('accepts a valid operation and drops unknown fields', () => {
-    const sent = { ...operation(uuid(1), noteId, 0, 'hi'), device: 'phone', clock: 123 };
-    expect(parseOperation(sent)).toEqual({
+    const operation = { op_id: uuid(1), note_id: noteId, base_revision: 0, text: 'hi' };
+    expect(parseOperation({ ...operation, device: 'phone', clock: 123 })).toEqual({
       valid: true,
-      operation: operation(uuid(1), noteId, 0, 'hi'),
+      operation,
     });
   });
 
   it('accepts empty text', () => {
-    expect(isValid(operation(uuid(1), noteId, 3, ''))).toBe(true);
+    expect(isValid({ op_id: uuid(1), note_id: noteId, base_revision: 3, text: '' })).toBe(true);
   });
 
   it('accepts text of exactly 64 KiB, counted in UTF-8 bytes', () => {
-    expect(isValid(operation(uuid(1), noteId, 0, 'a'.repeat(MAX_TEXT_BYTES)))).toBe(true);
-    expect(isValid(operation(uuid(1), noteId, 0, 'é'.repeat(MAX_TEXT_BYTES / 2)))).toBe(true);
+    expect(
+      isValid({
+        op_id: uuid(1),
+        note_id: noteId,
+        base_revision: 0,
+        text: 'a'.repeat(MAX_TEXT_BYTES),
+      }),
+    ).toBe(true);
+    expect(
+      isValid({
+        op_id: uuid(1),
+        note_id: noteId,
+        base_revision: 0,
+        text: 'é'.repeat(MAX_TEXT_BYTES / 2),
+      }),
+    ).toBe(true);
   });
 
   it('accepts a full surrogate pair', () => {
-    expect(isValid(operation(uuid(1), noteId, 0, 'note 😀'))).toBe(true);
+    expect(isValid({ op_id: uuid(1), note_id: noteId, base_revision: 0, text: 'note 😀' })).toBe(
+      true,
+    );
   });
 
   it.each([
@@ -52,7 +68,7 @@ describe('parseOperation', () => {
       'must be at most 65536 bytes',
     ],
   ])('rejects text with %s', (_, text, message) => {
-    expect(invalidResult(operation(uuid(1), noteId, 0, text))).toEqual({
+    expect(invalidResult({ op_id: uuid(1), note_id: noteId, base_revision: 0, text })).toEqual({
       op_id: uuid(1),
       status: 'invalid',
       errors: [{ field: 'text', message }],
@@ -65,7 +81,7 @@ describe('parseOperation', () => {
     expect(failingFields(sent)).toEqual(['note_id', 'base_revision', 'text']);
   });
 
-  const valid = operation(uuid(1), noteId, 0, '');
+  const valid = { op_id: uuid(1), note_id: noteId, base_revision: 0, text: '' };
 
   it.each([
     ['a missing op_id', { note_id: noteId, base_revision: 0, text: '' }, 'op_id'],

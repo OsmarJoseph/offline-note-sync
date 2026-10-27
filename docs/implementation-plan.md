@@ -48,11 +48,11 @@ Below its table, the case adds two checks. A resent O3 still gets its original c
 - **`notes` holds each note's id, current text and current revision**, updated in the same transaction as the operation that changed it.
 - **`operations` stores every valid operation as sent**, with its status and the revision its result shows, and results are rebuilt from these rows. Its `note_id` has no foreign key, since a `note_not_found` operation names a note that doesn't exist.
 - **Applied operations are the revisions**, and a unique index on `(note_id, revision)` for applied operations stops two edits from both winning.
-- **One transaction per operation** (READ COMMITTED) that locks the `op_id`, then the note, before reading anything, so concurrent requests wait in line instead of retrying. A create inserts the note with `on conflict do nothing`, and the unique keys stay as a safety net that fails the request if it ever fires.
+- **One transaction per operation** (READ COMMITTED) that takes an advisory lock on the `op_id`, then on the `note_id`, before reading anything, so concurrent requests wait in line instead of retrying. Advisory locks work before either row exists, which a row lock can't. A create inserts the note with `on conflict do nothing`, and the unique keys stay as a safety net that fails the request if it ever fires.
 
 ### Sync rules
 
-- **Each operation is validated on its own with zod**, so an invalid operation gets its own result without failing the batch.
+- **The controller validates each operation on its own with zod**, so an invalid operation gets its own result in its place without failing the batch, and the service only ever receives valid operations.
 - **Same content means equal `note_id`, `base_revision` and `text`**, compared exactly, with nothing trimmed or normalized.
 - **Text is `invalid` when it has:**
   - any U+0000, the invisible "null" character, because Postgres can't store it;
@@ -62,7 +62,7 @@ Below its table, the case adds two checks. A resent O3 still gets its original c
 
 ### Tooling
 
-- **Drizzle ORM 0.45 on `pg`**, because one schema gives typed rows and SQL migrations, and it supports `for update` and partial unique indexes.
+- **Drizzle ORM 0.45 on `pg`**, because one schema gives typed rows and SQL migrations, and it supports partial unique indexes and raw SQL for the advisory locks.
 - **TypeScript `~6.0.3`**, because typescript-eslint doesn't support TypeScript 7 yet.
 - **ESM, NestJS 12, Vitest and npm workspaces**, so reviewers need only Node 22.12+ and Docker.
 
@@ -139,7 +139,7 @@ Adds Nest and the database it talks to: Postgres 18.6 in Docker on port 54329, t
 
 ### Phase 3: repository and service
 
-Connects the rules to the database. The repository holds the queries, and the service runs each operation in its own transaction: lock, read, apply the sync rules, write. The service tests on Postgres cover the case example, the three highlighted tests and the resend rules, and the concurrency tests prove that requests arriving at the same moment still end with one winner.
+Connects the rules to the database. The repository holds the queries, and the service runs each operation in its own transaction: lock, read, apply the sync rules, write. The service tests on Postgres cover the case example, the first two highlighted tests and the resend rules, and the concurrency tests prove that requests arriving at the same moment still end with one winner.
 
 - Done when: a test that sends two creates of the same note at once passes, and the tests fail if an accepted edit doesn't raise the revision by 1.
 - Write that test before handling the race. With a plain insert, the second create crashes with a unique violation, and with `on conflict do nothing` it gets a normal `conflict` result instead.
@@ -150,7 +150,7 @@ Instead of hand-written cases, fast-check generates hundreds of random operation
 
 ### Phase 5: HTTP API
 
-Puts the service behind HTTP: `POST /sync`, `GET /notes`, `GET /notes/:id` and `POST /dev/reset`. The end-to-end tests send real requests to the running app.
+Puts the service behind HTTP: `POST /sync`, `GET /notes`, `GET /notes/:id` and `POST /dev/reset`. The controller validates each operation and sends only the valid ones to the service, in order. The end-to-end tests send real requests to the running app and cover the third highlighted test and invalid operations in a queue.
 
 ### Phase 6: scenarios and CLI
 

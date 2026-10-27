@@ -7,6 +7,7 @@ import * as schema from './schema.ts';
 
 export const DATABASE = Symbol('DATABASE');
 export type Database = NodePgDatabase<typeof schema>;
+export type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
 
 const POOL = Symbol('POOL');
 
